@@ -1,0 +1,27 @@
+{
+  "kind": "collectionType",
+  "collectionName": "productos",
+  "info": {
+    "singularName": "producto",
+    "pluralName": "productos",
+    "displayName": "Producto",
+    "description": "Catálogo centralizado de productos"
+  },
+  "options": { "draftAndPublish": true },
+  "pluginOptions": {},
+  "attributes": {
+    "nombre": { "type": "string", "required": true, "minLength": 2 },
+    "codigoInterno": { "type": "string", "required": true, "unique": true, "minLength": 2 },
+    "descripcion": { "type": "blocks" },
+    "caracteristicas": { "type": "component", "repeatable": true, "component": "catalogo.caracteristica" },
+    "categoria": { "type": "relation", "relation": "manyToOne", "target": "api::categoria.categoria", "inversedBy": "productos", "required": true },
+    "marca": { "type": "relation", "relation": "manyToOne", "target": "api::marca.marca", "inversedBy": "productos", "required": true },
+    "precio": { "type": "decimal", "min": 0 },
+    "mostrarPrecio": { "type": "boolean", "default": true },
+    "disponibilidad": { "type": "enumeration", "enum": ["Disponible", "Consultar en tienda"], "default": "Disponible", "required": true },
+    "activo": { "type": "boolean", "default": true },
+    "destacado": { "type": "boolean", "default": false },
+    "imagenPrincipal": { "type": "media", "multiple": false, "allowedTypes": ["images"] },
+    "galeria": { "type": "media", "multiple": true, "allowedTypes": ["images"] }
+  }
+}

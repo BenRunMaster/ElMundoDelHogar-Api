@@ -1,0 +1,19 @@
+{
+  "kind": "collectionType",
+  "collectionName": "marcas",
+  "info": {
+    "singularName": "marca",
+    "pluralName": "marcas",
+    "displayName": "Marca",
+    "description": "Marcas del catálogo"
+  },
+  "options": { "draftAndPublish": true },
+  "pluginOptions": {},
+  "attributes": {
+    "nombre": { "type": "string", "required": true, "minLength": 2 },
+    "descripcion": { "type": "text" },
+    "logo": { "type": "media", "multiple": false, "allowedTypes": ["images"] },
+    "activo": { "type": "boolean", "default": true },
+    "productos": { "type": "relation", "relation": "oneToMany", "target": "api::producto.producto", "mappedBy": "marca" }
+  }
+}

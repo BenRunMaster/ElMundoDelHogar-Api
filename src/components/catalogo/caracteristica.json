@@ -1,0 +1,9 @@
+{
+  "collectionName": "components_catalogo_caracteristicas",
+  "info": { "displayName": "Característica", "description": "Elemento ordenado de las características del producto" },
+  "options": {},
+  "attributes": {
+    "nombre": { "type": "string", "required": true },
+    "valor": { "type": "string", "required": true }
+  }
+}
