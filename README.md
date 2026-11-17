@@ -135,6 +135,28 @@ Invoke-RestMethod -Uri "$base/$($producto.documentId)?populate=*"
 
 La ficha del producto `DEMO-LIC-002` no incluye la propiedad `precio` en el JSON, aunque se solicite directamente.
 
+## API interna de usuarios
+
+Las rutas de administración requieren un JWT de una cuenta con rol `panel-admin`; las cuentas Editor reciben `403`.
+
+- `GET /api/admin/usuarios`: listado, búsqueda y filtros.
+- `POST /api/admin/usuarios`: crea un usuario; requiere `nombre`, `correo`, `contrasena` (mínimo 12 caracteres) y `rol` (`panel-admin` o `panel-editor`). `activo` es opcional y por defecto `true`; `permisos` también es opcional.
+- `PUT /api/admin/usuarios/:id`: actualiza `nombre`, `correo`, `contrasena`, `rol`, `activo` o `permisos`. `:id` es el ID numérico de Users & Permissions, no `documentId`.
+
+Para preparar el primer usuario `panel-admin`, ingresá al panel técnico de Strapi, abrí Content Manager > User y creá la cuenta con rol `Admin`. Después el administrador interno podrá gestionar las demás cuentas mediante estas rutas. El registro público continúa deshabilitado.
+
+Parámetros opcionales: `q` busca por nombre de usuario o correo; `role` acepta `panel-admin` o `panel-editor`; `estado` acepta `activo` o `inactivo`; `page` y `pageSize` controlan la paginación (`pageSize` máximo 100).
+
+```powershell
+$token = 'JWT_DEVUELTO_POR_LOGIN'
+$headers = @{ Authorization = "Bearer $token" }
+Invoke-RestMethod -Uri 'http://localhost:1337/api/admin/usuarios?q=maria&role=panel-editor&estado=activo&page=1&pageSize=10' -Headers $headers
+```
+
+Los módulos de `permisos` son `productos`, `categorias`, `marcas`, `promociones`, `banners`, `sucursales`, `informacionNegocio` y `usuarios`; cada valor es booleano. En esta etapa son accesos por módulo, no acciones CRUD separadas. Editor no puede recibir el permiso `usuarios`. El backend incluye la política `global::permiso-modulo` para proteger las rutas de cada módulo al implementarlas; ocultar controles en Next.js no reemplaza esa validación.
+
+La respuesta incluye `id` numérico, `nombre`, `correo`, `rol`, `rolNombre`, `activo`, `confirmado` y el mapa `permisos`. `ultimoAcceso` se devuelve como `null` porque el modelo actual no guarda ese dato. `meta.pagination` contiene los totales y `meta.resumen` los conteos generales. El usuario no puede cambiar su propio rol, permisos ni estado, y no se permite desactivar o degradar el último Admin activo.
+
 ## Alcance actual y siguiente pendiente
 
 Incluye el CMS Strapi nativo y el API público del catálogo. No incluye el frontend Next.js, un dashboard personalizado, promociones, banners ni sucursales. Antes de conectar el sitio, verificá manualmente el usuario administrador, la carga de imágenes en el Media Library y las relaciones pobladas desde el navegador. El siguiente pendiente es conectar el consumo de estos endpoints desde el frontend de Josué.

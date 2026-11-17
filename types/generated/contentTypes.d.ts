@@ -1058,10 +1058,22 @@ export interface PluginUsersPermissionsUser
       'plugin::users-permissions.user'
     > &
       Schema.Attribute.Private;
+    nombreCompleto: Schema.Attribute.String;
     password: Schema.Attribute.Password &
       Schema.Attribute.Private &
       Schema.Attribute.SetMinMaxLength<{
         minLength: 6;
+      }>;
+    permisos: Schema.Attribute.JSON &
+      Schema.Attribute.DefaultTo<{
+        banners: false;
+        categorias: false;
+        informacionNegocio: false;
+        marcas: false;
+        productos: false;
+        promociones: false;
+        sucursales: false;
+        usuarios: false;
       }>;
     provider: Schema.Attribute.String;
     publishedAt: Schema.Attribute.DateTime;

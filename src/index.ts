@@ -23,6 +23,11 @@ async function ensurePanelRoles(strapi: Core.Strapi) {
     'plugin::users-permissions.auth.getSessions',
     'plugin::users-permissions.auth.revokeSession',
   ];
+  const adminActions = [
+    'api::usuario.usuario.find',
+    'api::usuario.usuario.create',
+    'api::usuario.usuario.update',
+  ];
 
   for (const role of PANEL_ROLES) {
     let existing = await roleQuery.findOne({ where: { type: role.type } });
@@ -38,6 +43,17 @@ async function ensurePanelRoles(strapi: Core.Strapi) {
       });
       if (!permission) {
         await permissionQuery.create({ data: { action, role: existing.id } });
+      }
+    }
+
+    if (role.type === 'panel-admin') {
+      for (const action of adminActions) {
+        const permission = await permissionQuery.findOne({
+          where: { action, role: { id: existing.id } },
+        });
+        if (!permission) {
+          await permissionQuery.create({ data: { action, role: existing.id } });
+        }
       }
     }
   }
