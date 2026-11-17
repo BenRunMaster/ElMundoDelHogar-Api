@@ -24,6 +24,11 @@ const deniedTypes = [
 ];
 
 const config = ({ env }: Core.Config.Shared.ConfigParams): Core.Config.Plugin => ({
+  documentation: {
+    // Keep interactive API docs available locally and disabled in production
+    // unless an operator explicitly enables and protects them.
+    enabled: env.bool('API_DOCS_ENABLED', env('NODE_ENV') !== 'production'),
+  },
   'users-permissions': {
     config: {
       jwtManagement: 'refresh',

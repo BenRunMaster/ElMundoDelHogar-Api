@@ -25,13 +25,29 @@ node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 
 Usá dos valores separados por coma para `APP_KEYS`. No compartás ni subás `.env`. La base PostgreSQL la prepara el servicio local; `.env` y las cargas locales están ignorados por Git.
 
-Iniciá el CMS:
+En esta instalación PostgreSQL corre en Docker Desktop y publica el puerto `5432:5432`. Iniciá ese contenedor antes de Strapi. Si clonás el repositorio, ajustá `DATABASE_NAME`, `DATABASE_USERNAME` y `DATABASE_PASSWORD` en `.env` para que coincidan con los valores configurados en tu contenedor; los valores del `.env.example` son solo una plantilla.
+
+### Levantar Strapi
+
+Con PostgreSQL en ejecución y desde la raíz del repositorio, iniciá el CMS con:
 
 ```powershell
 npm run develop
 ```
 
-Abrí <http://localhost:1337/admin> y creá el primer usuario administrador. La API queda en <http://localhost:1337/api>.
+Abrí <http://localhost:1337/admin>. La API queda en <http://localhost:1337/api>. En desarrollo, Swagger UI estará en <http://localhost:1337/documentation/v1.0.0> después de que Strapi genere la documentación al iniciar. En producción queda deshabilitado por defecto.
+
+### Acceso al panel de administración
+
+El correo de la cuenta administradora actual es `hector7chess@gmail.com`. La contraseña se definió al crear esa cuenta y no se guarda en este README, en `.env` ni en `.env.example`.
+
+Si olvidás la contraseña, restablecela desde PowerShell en la raíz del proyecto. El comando solicita correo y contraseña nueva de forma interactiva:
+
+```powershell
+npm run strapi -- admin:reset-user-password
+```
+
+No guardés contraseñas en archivos versionados ni en el historial de comandos. Para producción, configurá una contraseña nueva y almacenala en un gestor de contraseñas.
 
 ## Modelos del catálogo
 
@@ -40,6 +56,8 @@ Abrí <http://localhost:1337/admin> y creá el primer usuario administrador. La 
 - **Producto** (`api::producto.producto`): `nombre`, `codigoInterno` (único), `descripcion` (Blocks), `caracteristicas` (componentes repetibles en su orden), `categoria`, `marca`, `precio`, `mostrarPrecio`, `disponibilidad`, `activo`, `destacado`, `imagenPrincipal`, `galeria`.
 
 Cada producto tiene una categoría y una marca. `galeria` admite hasta cuatro imágenes adicionales. `disponibilidad` acepta exactamente `Disponible` o `Consultar en tienda`. La publicación de Strapi (Draft & Publish) es independiente de `activo` y de la disponibilidad comercial.
+
+El contenido administrable vive en Strapi y PostgreSQL. El producto es el registro central del catálogo; categoría y marca son relaciones requeridas. Las características son componentes repetibles que conservan el orden configurado. Las imágenes se administran desde el Media Library nativo de Strapi. Este repositorio no incluye el sitio Next.js ni módulos de promociones, banners o sucursales.
 
 ## Datos de ejemplo y comprobación
 

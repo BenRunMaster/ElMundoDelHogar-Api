@@ -1,0 +1,32 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "version": "1.0.0",
+    "title": "El Mundo del Hogar API",
+    "description": "Referencia OpenAPI de los endpoints disponibles para el catálogo y la autenticación del panel."
+  },
+  "x-strapi-config": {
+    "plugins": ["users-permissions"],
+    "path": "/documentation"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:1337/api",
+      "description": "Desarrollo local"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  }
+}

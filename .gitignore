@@ -132,3 +132,10 @@ dist
 build
 .strapi-updater.json
 .strapi-cloud.json
+
+# Documentación local de planificación (no incluir en commits)
+docs/
+
+# Archivos generados por el plugin OpenAPI de Strapi
+src/extensions/documentation/documentation/
+src/extensions/documentation/public/
