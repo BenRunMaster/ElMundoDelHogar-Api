@@ -9,7 +9,7 @@ const PANEL_ROLES = [
   {
     name: 'Editor',
     type: 'panel-editor',
-    description: 'Editor del panel interno; sus permisos por módulo se definirán en la siguiente etapa.',
+    description: 'Editor del panel interno con permisos asignados por módulo.',
   },
 ] as const;
 
@@ -28,6 +28,29 @@ async function ensurePanelRoles(strapi: Core.Strapi) {
     'api::usuario.usuario.create',
     'api::usuario.usuario.update',
   ];
+  const catalogActions = [
+    'api::producto.producto.adminFind',
+    'api::producto.producto.adminFindOne',
+    'api::producto.producto.adminCreate',
+    'api::producto.producto.adminUpdate',
+    'api::producto.producto.adminDelete',
+    'api::producto.producto.adminPublish',
+    'api::producto.producto.adminUnpublish',
+    'api::categoria.categoria.adminFind',
+    'api::categoria.categoria.adminFindOne',
+    'api::categoria.categoria.adminCreate',
+    'api::categoria.categoria.adminUpdate',
+    'api::categoria.categoria.adminDelete',
+    'api::categoria.categoria.adminPublish',
+    'api::categoria.categoria.adminUnpublish',
+    'api::marca.marca.adminFind',
+    'api::marca.marca.adminFindOne',
+    'api::marca.marca.adminCreate',
+    'api::marca.marca.adminUpdate',
+    'api::marca.marca.adminDelete',
+    'api::marca.marca.adminPublish',
+    'api::marca.marca.adminUnpublish',
+  ];
 
   for (const role of PANEL_ROLES) {
     let existing = await roleQuery.findOne({ where: { type: role.type } });
@@ -37,7 +60,7 @@ async function ensurePanelRoles(strapi: Core.Strapi) {
       existing = await roleQuery.update({ where: { id: existing.id }, data: role });
     }
 
-    for (const action of selfServiceActions) {
+    for (const action of [...selfServiceActions, ...catalogActions]) {
       const permission = await permissionQuery.findOne({
         where: { action, role: { id: existing.id } },
       });

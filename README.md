@@ -153,10 +153,75 @@ $headers = @{ Authorization = "Bearer $token" }
 Invoke-RestMethod -Uri 'http://localhost:1337/api/admin/usuarios?q=maria&role=panel-editor&estado=activo&page=1&pageSize=10' -Headers $headers
 ```
 
-Los módulos de `permisos` son `productos`, `categorias`, `marcas`, `promociones`, `banners`, `sucursales`, `informacionNegocio` y `usuarios`; cada valor es booleano. En esta etapa son accesos por módulo, no acciones CRUD separadas. Editor no puede recibir el permiso `usuarios`. El backend incluye la política `global::permiso-modulo` para proteger las rutas de cada módulo al implementarlas; ocultar controles en Next.js no reemplaza esa validación.
+Los módulos de `permisos` son `productos`, `categorias`, `marcas`, `promociones`, `banners`, `sucursales`, `informacionNegocio` y `usuarios`; cada valor es booleano. En esta etapa son accesos por módulo, no acciones CRUD separadas. Editor no puede recibir el permiso `usuarios`. La política `global::permiso-modulo` ya protege las rutas internas de productos, categorías y marcas; ocultar controles en Next.js no reemplaza esa validación.
 
 La respuesta incluye `id` numérico, `nombre`, `correo`, `rol`, `rolNombre`, `activo`, `confirmado` y el mapa `permisos`. `ultimoAcceso` se devuelve como `null` porque el modelo actual no guarda ese dato. `meta.pagination` contiene los totales y `meta.resumen` los conteos generales. El usuario no puede cambiar su propio rol, permisos ni estado, y no se permite desactivar o degradar el último Admin activo.
 
+## API del catálogo para el panel interno
+
+Las rutas `/api/admin/...` requieren un JWT de Users & Permissions. Admin tiene acceso a los tres módulos; Editor necesita el permiso individual correspondiente (`productos`, `categorias` o `marcas`). Un Editor sin permiso recibe `403`; una petición sin sesión recibe `401`. Estos permisos habilitan todas las operaciones del módulo, incluida la eliminación y publicación.
+
+### Lecturas públicas de categorías y marcas
+
+```http
+GET /api/categorias
+GET /api/categorias/:id
+GET /api/marcas
+GET /api/marcas/:id
+```
+
+Solo se devuelven elementos publicados y con `activo=true`. En las rutas de detalle, `:id` recibe el `documentId` de Strapi 5. Los listados aceptan los filtros, orden y paginación REST de Strapi.
+
+### Administración de productos
+
+```http
+GET    /api/admin/productos
+GET    /api/admin/productos/:documentId
+POST   /api/admin/productos
+PUT    /api/admin/productos/:documentId
+DELETE /api/admin/productos/:documentId
+POST   /api/admin/productos/:documentId/publicar
+POST   /api/admin/productos/:documentId/despublicar
+```
+
+El listado admite `q` (nombre o código), `categoria` y `marca` (sus `documentId`), `activo`, `destacado`, `status`, `page`, `pageSize` y `sort`. El detalle incluye categoría, marca, imagen principal, galería y características. `pageSize` va de 1 a 100. Los campos de escritura son los del modelo Producto y las relaciones/media usan los formatos de Strapi.
+
+### Administración de categorías y marcas
+
+```http
+GET    /api/admin/categorias
+GET    /api/admin/categorias/:documentId
+POST   /api/admin/categorias
+PUT    /api/admin/categorias/:documentId
+DELETE /api/admin/categorias/:documentId
+POST   /api/admin/categorias/:documentId/publicar
+POST   /api/admin/categorias/:documentId/despublicar
+
+GET    /api/admin/marcas
+GET    /api/admin/marcas/:documentId
+POST   /api/admin/marcas
+PUT    /api/admin/marcas/:documentId
+DELETE /api/admin/marcas/:documentId
+POST  /api/admin/marcas/:documentId/publicar
+POST  /api/admin/marcas/:documentId/despublicar
+```
+
+Los listados admiten `q`, `activo`, `status`, `page`, `pageSize` y `sort`; también incluyen `cantidadProductos`. No se permite eliminar una categoría o marca que esté relacionada con productos: la API responde `409`, por lo que debe desactivarse si ya está en uso.
+
+Para los tres recursos, `status=draft|published` selecciona la versión de lectura; por defecto es `draft`. Crear y actualizar siempre guardan un borrador. La publicación es explícita con la ruta `/publicar`; `/despublicar` devuelve el documento a borrador. El cuerpo puede enviarse con los campos en la raíz o dentro de `{ "data": { ... } }`.
+
+Ejemplo con PowerShell:
+
+```powershell
+$token = 'JWT_DEVUELTO_POR_LOGIN'
+$headers = @{ Authorization = "Bearer $token" }
+$base = 'http://localhost:1337/api/admin'
+Invoke-RestMethod -Uri "$base/productos?q=refrigeradora&activo=true&page=1&pageSize=10" -Headers $headers
+Invoke-RestMethod -Uri "$base/categorias?status=draft" -Headers $headers
+```
+
+Las imágenes se consultan y relacionan usando Media Library de Strapi. La ruta propia de carga de archivos con autorización por permiso individual de módulo aún queda pendiente; por ahora se puede cargar desde el panel de Strapi y enviar el ID de media al guardar el documento.
+
 ## Alcance actual y siguiente pendiente
 
-Incluye el CMS Strapi nativo y el API público del catálogo. No incluye el frontend Next.js, un dashboard personalizado, promociones, banners ni sucursales. Antes de conectar el sitio, verificá manualmente el usuario administrador, la carga de imágenes en el Media Library y las relaciones pobladas desde el navegador. El siguiente pendiente es conectar el consumo de estos endpoints desde el frontend de Josué.
+Incluye el CMS Strapi nativo, API pública de productos/categorías/marcas y CRUD interno de productos/categorías/marcas y usuarios. No incluye el frontend Next.js, promociones, banners, sucursales, información del negocio, formulario de contacto ni dashboard personalizado. El siguiente pendiente del plan es completar carga de medios protegida por módulo y después implementar el contenido de inicio, promociones y banners.
