@@ -6,15 +6,30 @@ import {
   makeSearchFilters,
   parseQueryBoolean,
   parseStatus,
+  uploadCatalogImages,
   validateName,
 } from '../../../utils/catalog-admin';
 
 const UID = 'api::categoria.categoria';
 const PRODUCT_UID = 'api::producto.producto';
 
+function populateCategoryImage(ctx: any) {
+  const requested = ctx.query.populate;
+  if (requested === '*') return;
+  if (typeof requested === 'string') {
+    ctx.query.populate = [requested, 'iconoImagen'];
+    return;
+  }
+  ctx.query.populate = {
+    ...(requested && typeof requested === 'object' && !Array.isArray(requested) ? requested : {}),
+    iconoImagen: true,
+  };
+}
+
 export default factories.createCoreController(UID, () => ({
   async find(ctx) {
     ctx.query.status = 'published';
+    populateCategoryImage(ctx);
     const existing = ctx.query.filters;
     ctx.query.filters = existing
       ? { $and: [existing, { activo: { $eq: true } }] }
@@ -24,6 +39,7 @@ export default factories.createCoreController(UID, () => ({
 
   async findOne(ctx) {
     ctx.query.status = 'published';
+    populateCategoryImage(ctx);
     const fields = Array.isArray(ctx.query.fields)
       ? [...ctx.query.fields]
       : typeof ctx.query.fields === 'string' ? [ctx.query.fields] : [];
@@ -43,7 +59,7 @@ export default factories.createCoreController(UID, () => ({
         UID,
         combineFilters(filters),
         ctx.query,
-        [],
+        ['iconoImagen'],
         ['nombre', 'activo', 'createdAt', 'updatedAt'],
       );
       const data = await Promise.all(response.data.map(async (category: any) => ({
@@ -63,6 +79,7 @@ export default factories.createCoreController(UID, () => ({
       const data = await (getStrapi() as any).documents(UID).findOne({
         documentId: ctx.params.documentId,
         status: parseStatus(ctx.query),
+        populate: ['iconoImagen'],
       });
       if (!data) return ctx.notFound('Categoría no encontrada.');
       ctx.body = { data };
@@ -121,5 +138,9 @@ export default factories.createCoreController(UID, () => ({
     const data = await (getStrapi() as any).documents(UID).unpublish({ documentId: ctx.params.documentId });
     if (!data) return ctx.notFound('Categoría no encontrada.');
     ctx.body = { data };
+  },
+
+  async adminUploadMedia(ctx: any) {
+    return uploadCatalogImages(ctx, 1);
   },
 }));

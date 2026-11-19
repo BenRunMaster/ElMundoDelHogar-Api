@@ -91,3 +91,37 @@ export function validateName(data: Record<string, unknown>) {
   }
   data.nombre = data.nombre.trim();
 }
+
+export async function uploadCatalogImages(ctx: any, maxFiles: number) {
+  const rawFiles = ctx.request.files?.files;
+  const files = Array.isArray(rawFiles) ? rawFiles : rawFiles ? [rawFiles] : [];
+
+  if (files.length === 0 || files.length > maxFiles) {
+    return ctx.badRequest(`Adjuntá entre 1 y ${maxFiles} imagen(es) en el campo multipart "files".`);
+  }
+
+  for (const file of files) {
+    if (typeof file.mimetype !== 'string' || !file.mimetype.startsWith('image/')) {
+      return ctx.badRequest('Solo se permiten archivos de imagen.');
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      return ctx.badRequest('Cada imagen debe pesar como máximo 10 MB.');
+    }
+  }
+
+  const uploadController = (getStrapi() as any).plugin('upload').controller('content-api');
+  return uploadController.upload(ctx);
+}
+
+export function hideDisabledPrices(data: any): void {
+  if (!data) return;
+  if (Array.isArray(data)) {
+    data.forEach(hideDisabledPrices);
+    return;
+  }
+  if (typeof data !== 'object') return;
+  if (data.mostrarPrecio === false) delete data.precio;
+  Object.values(data).forEach((value) => {
+    if (value && typeof value === 'object') hideDisabledPrices(value);
+  });
+}

@@ -1,0 +1,22 @@
+{
+  "kind": "collectionType",
+  "collectionName": "promociones",
+  "info": {
+    "singularName": "promocion",
+    "pluralName": "promociones",
+    "displayName": "Promoción",
+    "description": "Promociones comerciales de la tienda"
+  },
+  "options": { "draftAndPublish": true },
+  "pluginOptions": {},
+  "attributes": {
+    "titulo": { "type": "string", "required": true, "minLength": 2, "maxLength": 200 },
+    "descripcion": { "type": "text" },
+    "tipo": { "type": "enumeration", "enum": ["descuento", "dos-por-uno", "envio-gratis", "especial"], "required": true },
+    "valor": { "type": "decimal", "min": 0 },
+    "imagen": { "type": "media", "multiple": false, "allowedTypes": ["images"] },
+    "fechaInicio": { "type": "date", "required": true },
+    "fechaFin": { "type": "date", "required": true },
+    "activo": { "type": "boolean", "default": true }
+  }
+}

@@ -51,13 +51,15 @@ No guardés contraseñas en archivos versionados ni en el historial de comandos.
 
 ## Modelos del catálogo
 
-- **Categoría** (`api::categoria.categoria`, ruta de administración `/content-manager/collection-types/api::categoria.categoria`): `nombre`, `descripcion`, `icono`, `activo`.
+- **Categoría** (`api::categoria.categoria`, ruta de administración `/content-manager/collection-types/api::categoria.categoria`): `nombre`, `descripcion`, `icono` (texto opcional existente), `iconoImagen` (media opcional), `activo`.
 - **Marca** (`api::marca.marca`): `nombre`, `descripcion`, `logo`, `activo`.
 - **Producto** (`api::producto.producto`): `nombre`, `codigoInterno` (único), `descripcion` (Blocks), `caracteristicas` (componentes repetibles en su orden), `categoria`, `marca`, `precio`, `mostrarPrecio`, `disponibilidad`, `activo`, `destacado`, `imagenPrincipal`, `galeria`.
 
 Cada producto tiene una categoría y una marca. `galeria` admite hasta cuatro imágenes adicionales. `disponibilidad` acepta exactamente `Disponible` o `Consultar en tienda`. La publicación de Strapi (Draft & Publish) es independiente de `activo` y de la disponibilidad comercial.
 
-El contenido administrable vive en Strapi y PostgreSQL. El producto es el registro central del catálogo; categoría y marca son relaciones requeridas. Las características son componentes repetibles que conservan el orden configurado. Las imágenes se administran desde el Media Library nativo de Strapi. Este repositorio no incluye el sitio Next.js ni módulos de promociones, banners o sucursales.
+El contenido administrable vive en Strapi y PostgreSQL. El producto es el registro central del catálogo; categoría y marca son relaciones requeridas. Las características son componentes repetibles que conservan el orden configurado. Las imágenes se administran desde el Media Library nativo de Strapi.
+
+También están disponibles los modelos **Promoción** (`titulo`, `descripcion`, `tipo`, `valor`, `imagen`, `fechaInicio`, `fechaFin`, `activo`), **Banner** (`titulo`, `descripcion`, `imagen`, `enlaceDestino`, `ordenVisualizacion`, `activo`) y **Sucursal** (`nombre`, `ciudad`, `telefono`, `direccion`, `diasAtencion`, `horaApertura`, `horaCierre`, `latitud`, `longitud`, `activo`). Los tipos de promoción son `descuento`, `dos-por-uno`, `envio-gratis` y `especial`; el valor del descuento porcentual admite de 0 a 100, sin incluir 0. Los tres modelos usan Draft & Publish. Solo contenido publicado y activo aparece públicamente. Las promociones se muestran solo durante su vigencia en la zona horaria de El Salvador.
 
 ## Datos de ejemplo y comprobación
 
@@ -159,7 +161,7 @@ La respuesta incluye `id` numérico, `nombre`, `correo`, `rol`, `rolNombre`, `ac
 
 ## API del catálogo para el panel interno
 
-Las rutas `/api/admin/...` requieren un JWT de Users & Permissions. Admin tiene acceso a los tres módulos; Editor necesita el permiso individual correspondiente (`productos`, `categorias` o `marcas`). Un Editor sin permiso recibe `403`; una petición sin sesión recibe `401`. Estos permisos habilitan todas las operaciones del módulo, incluida la eliminación y publicación.
+Las rutas `/api/admin/...` requieren un JWT de Users & Permissions. Admin tiene acceso a los tres módulos; Editor necesita el permiso individual correspondiente (`productos`, `categorias` o `marcas`). Strapi rechaza con `403` tanto al usuario público sin permiso como al Editor sin autorización para el módulo. Estos permisos habilitan todas las operaciones del módulo, incluida la eliminación y publicación.
 
 ### Lecturas públicas de categorías y marcas
 
@@ -220,8 +222,77 @@ Invoke-RestMethod -Uri "$base/productos?q=refrigeradora&activo=true&page=1&pageS
 Invoke-RestMethod -Uri "$base/categorias?status=draft" -Headers $headers
 ```
 
-Las imágenes se consultan y relacionan usando Media Library de Strapi. La ruta propia de carga de archivos con autorización por permiso individual de módulo aún queda pendiente; por ahora se puede cargar desde el panel de Strapi y enviar el ID de media al guardar el documento.
+Las cargas se hacen como `multipart/form-data`, adjuntando el archivo en el campo `files`. Se admite una imagen por solicitud para categorías y marcas, y hasta cinco para productos (imagen principal más galería); cada archivo puede pesar hasta 10 MB. Se permiten imágenes y se rechazan otros tipos antes de guardarlos. La respuesta es la lista de medios creada por el plugin Upload de Strapi; usá el `id` numérico para relacionar cada medio en el siguiente `POST` o `PUT` del contenido.
+
+```http
+POST /api/admin/productos/media
+POST /api/admin/categorias/media
+POST /api/admin/marcas/media
+```
+
+Cada ruta requiere el mismo permiso del módulo al que pertenece. Ejemplo con `curl.exe` en PowerShell:
+
+```powershell
+$token = 'JWT_DEVUELTO_POR_LOGIN'
+$headers = @{ Authorization = "Bearer $token" }
+curl.exe -X POST 'http://localhost:1337/api/admin/productos/media' -H "Authorization: Bearer $token" -F 'files=@C:\imagenes\producto.jpg'
+```
+
+La política de seguridad del plugin también bloquea SVG. Para relacionar el medio devuelto, enviá su ID en el campo correspondiente, por ejemplo `imagenPrincipal: 42`, `galeria: [42, 43]` o `iconoImagen: 42`.
+
+## APIs de promociones, banners y sucursales
+
+Las lecturas públicas son:
+
+```http
+GET /api/promociones
+GET /api/banners
+GET /api/sucursales
+GET /api/public/inicio
+```
+
+`/api/promociones` solo incluye promociones publicadas, activas y vigentes hoy en `America/El_Salvador`; permite solicitar `populate[imagen]=true`. `/api/banners` devuelve los banners publicados y activos en `ordenVisualizacion` ascendente. `/api/sucursales` devuelve sucursales publicadas y activas. `/api/public/inicio` entrega en una respuesta las listas `banners`, `categorias`, `productos`, `marcas`, `promociones` y `sucursales`; incluye productos destacados y limita el precio con la misma regla de privacidad que los endpoints del catálogo. Los límites opcionales son `limiteBanners`, `limiteCategorias`, `limiteProductos`, `limiteMarcas`, `limitePromociones` y `limiteSucursales` (enteros de 1 a 20).
+
+Ejemplos:
+
+```powershell
+$api = 'http://localhost:1337/api'
+Invoke-RestMethod -Uri "$api/public/inicio?limiteProductos=4&limiteBanners=3"
+Invoke-RestMethod -Uri "$api/promociones?populate[imagen]=true"
+Invoke-RestMethod -Uri "$api/banners?populate[imagen]=true"
+Invoke-RestMethod -Uri "$api/sucursales"
+```
+
+La gestión requiere `Authorization: Bearer <JWT>` de una cuenta autenticada del panel interno. Admin puede operar todos los módulos; Editor necesita el permiso correspondiente (`promociones`, `banners` o `sucursales`). Para cada recurso hay listado, detalle por `documentId`, creación, edición, eliminación, publicación y despublicación bajo `/api/admin/<recurso>`. Los listados aceptan `q`, `activo`, `status=draft|published`, `page`, `pageSize` y `sort` según el recurso. Las escrituras aceptan campos en la raíz o dentro de `{ "data": { ... } }`; crear y editar guardan borradores y publicar es una acción explícita.
+
+```http
+GET    /api/admin/promociones
+GET    /api/admin/promociones/:documentId
+POST   /api/admin/promociones
+PUT    /api/admin/promociones/:documentId
+DELETE /api/admin/promociones/:documentId
+POST   /api/admin/promociones/:documentId/publicar
+POST   /api/admin/promociones/:documentId/despublicar
+
+GET    /api/admin/banners
+GET    /api/admin/banners/:documentId
+POST   /api/admin/banners
+PUT    /api/admin/banners/:documentId
+DELETE /api/admin/banners/:documentId
+POST   /api/admin/banners/:documentId/publicar
+POST   /api/admin/banners/:documentId/despublicar
+
+GET    /api/admin/sucursales
+GET    /api/admin/sucursales/:documentId
+POST   /api/admin/sucursales
+PUT    /api/admin/sucursales/:documentId
+DELETE /api/admin/sucursales/:documentId
+POST   /api/admin/sucursales/:documentId/publicar
+POST   /api/admin/sucursales/:documentId/despublicar
+```
+
+Las rutas `POST /api/admin/promociones/media` y `POST /api/admin/banners/media` aceptan una imagen (`multipart/form-data`, campo `files`, máximo 10 MB). El banner exige imagen, destino y orden; el destino debe ser una ruta local o una URL HTTP/HTTPS. Las promociones requieren fechas `YYYY-MM-DD`, no permiten fin anterior al inicio y limitan el descuento porcentual a 100. Las sucursales requieren ciudad, teléfono, dirección, días y horas de atención. Las rutas del API aceptan horas `HH:mm` o `HH:mm:ss` y las normalizan al formato de almacenamiento de Strapi. Latitud y longitud son opcionales pero deben enviarse juntas.
 
 ## Alcance actual y siguiente pendiente
 
-Incluye el CMS Strapi nativo, API pública de productos/categorías/marcas y CRUD interno de productos/categorías/marcas y usuarios. No incluye el frontend Next.js, promociones, banners, sucursales, información del negocio, formulario de contacto ni dashboard personalizado. El siguiente pendiente del plan es completar carga de medios protegida por módulo y después implementar el contenido de inicio, promociones y banners.
+Incluye el CMS Strapi nativo, APIs públicas del catálogo y de inicio, CRUD interno de productos, categorías, marcas, promociones, banners, sucursales y usuarios, y carga autenticada de imágenes. No incluye el frontend Next.js, información editable del negocio, formulario de contacto, notificaciones ni dashboard personalizado. El siguiente pendiente de la API es modelar la información institucional/contacto y su lectura pública; luego se podrá conectar el sitio de Next.js.

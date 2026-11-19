@@ -1,5 +1,10 @@
-import { compileStrapi, createStrapi } from '@strapi/strapi';
+import { createRequire } from 'node:module';
 import { mkdir, writeFile } from 'node:fs/promises';
+
+// Load Strapi through its CommonJS entry point. Its ESM dependency graph imports
+// lodash/fp as a directory, which Node 24 rejects when running this standalone script.
+const require = createRequire(import.meta.url);
+const { compileStrapi, createStrapi } = require('@strapi/strapi');
 
 const appContext = await compileStrapi();
 const strapi = await createStrapi(appContext).load();

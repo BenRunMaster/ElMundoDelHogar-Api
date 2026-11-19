@@ -6,6 +6,7 @@ import {
   makeSearchFilters,
   parseQueryBoolean,
   parseStatus,
+  uploadCatalogImages,
   validateName,
 } from '../../../utils/catalog-admin';
 
@@ -122,5 +123,9 @@ export default factories.createCoreController(UID, () => ({
     const data = await (getStrapi() as any).documents(UID).unpublish({ documentId: ctx.params.documentId });
     if (!data) return ctx.notFound('Marca no encontrada.');
     ctx.body = { data };
+  },
+
+  async adminUploadMedia(ctx: any) {
+    return uploadCatalogImages(ctx, 1);
   },
 }));

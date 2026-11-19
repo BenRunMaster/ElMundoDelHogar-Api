@@ -36,6 +36,12 @@ export default {
       config: secure('adminCreate'),
     },
     {
+      method: 'POST',
+      path: '/admin/productos/media',
+      handler: 'producto.adminUploadMedia',
+      config: secure('adminUploadMedia'),
+    },
+    {
       method: 'PUT',
       path: '/admin/productos/:documentId',
       handler: 'producto.adminUpdate',

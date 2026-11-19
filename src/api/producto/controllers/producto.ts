@@ -2,57 +2,138 @@ import { factories } from '@strapi/strapi';
 import {
   combineFilters,
   getStrapi,
+  hideDisabledPrices,
   listDocuments,
   makeSearchFilters,
   parseQueryBoolean,
   parseStatus,
+  uploadCatalogImages,
   validateName,
 } from '../../../utils/catalog-admin';
 
 const UID = 'api::producto.producto';
 
-function hideDisabledPrices(data: any): void {
-  if (!data) return;
-  if (Array.isArray(data)) {
-    data.forEach(hideDisabledPrices);
-    return;
-  }
-  if (typeof data !== 'object') return;
+function ensureFields(ctx: any, requiredFields: string[]) {
+  const requested = ctx.query.fields;
+  if (requested === undefined) return undefined;
+  const fields = Array.isArray(requested) ? requested : [requested];
+  ctx.query.fields = [...new Set([...fields, ...requiredFields])];
+  return new Set(fields);
+}
 
-  if (data.mostrarPrecio === false) delete data.precio;
-  Object.values(data).forEach((value) => {
-    if (value && typeof value === 'object') hideDisabledPrices(value);
-  });
+function removeInternalFields(data: any, requested: Set<string> | undefined, internalFields: string[]) {
+  if (!requested || !data || typeof data !== 'object') return;
+  for (const field of internalFields) {
+    if (!requested.has(field)) delete data[field];
+  }
+}
+
+function requestedRelationFields(populate: any): string[] {
+  if (populate === '*') return ['categoria', 'marca'];
+  if (typeof populate === 'string') return ['categoria', 'marca'].filter((field) => populate === field);
+  if (Array.isArray(populate)) return ['categoria', 'marca'].filter((field) => populate.includes(field));
+  if (populate && typeof populate === 'object') {
+    return ['categoria', 'marca'].filter((field) => Boolean(populate[field]));
+  }
+  return [];
+}
+
+async function hydratePublicRelations(data: any[], populate: any) {
+  const fields = requestedRelationFields(populate);
+  if (!fields.length) return;
+  const documents = (getStrapi() as any).documents(UID);
+  await Promise.all(data.map(async (product) => {
+    if (!product.documentId) return;
+    const full = await documents.findOne({ documentId: product.documentId, status: 'published', populate: fields });
+    for (const field of fields) product[field] = full?.[field] ?? null;
+  }));
 }
 
 export default factories.createCoreController(UID, () => ({
   async find(ctx) {
     ctx.query.status = 'published';
-    if (Array.isArray(ctx.query.fields) && !ctx.query.fields.includes('mostrarPrecio')) {
-      ctx.query.fields = [...ctx.query.fields, 'mostrarPrecio'];
-    } else if (typeof ctx.query.fields === 'string') {
-      ctx.query.fields = [ctx.query.fields, 'mostrarPrecio'];
+    const requestedFields = ensureFields(ctx, ['mostrarPrecio']);
+    const existing = ctx.query.filters as Record<string, any> | undefined;
+    const relationFilters: Record<string, string> = {};
+    for (const relation of ['categoria', 'marca']) {
+      const condition = existing?.[relation]?.documentId?.$eq;
+      if (condition !== undefined) {
+        if (typeof condition !== 'string' || !condition.trim()) {
+          return ctx.badRequest(`${relation} debe ser un documentId válido.`);
+        }
+        relationFilters[relation] = condition;
+        delete existing?.[relation];
+      }
     }
-    const existing = ctx.query.filters;
     ctx.query.filters = existing
       ? { $and: [existing, { activo: { $eq: true } }] }
       : { activo: { $eq: true } };
 
-    const response = await super.find(ctx);
-    hideDisabledPrices(response.data);
-    return response;
+    const relations = Object.keys(relationFilters);
+    if (!relations.length) {
+      const response = await super.find(ctx);
+      await hydratePublicRelations(response.data ?? [], ctx.query.populate);
+      hideDisabledPrices(response.data);
+      for (const item of response.data ?? []) removeInternalFields(item, requestedFields, ['mostrarPrecio']);
+      return response;
+    }
+
+    // Strapi's REST filter validator rejects deep relation filters on this API
+    // schema. Keep the supported scalar filters/pagination in the core query,
+    // then apply relation documentIds through the database query engine.
+    const requestedPopulate: any = ctx.query.populate;
+    const requestedPagination = ctx.query.pagination as Record<string, unknown> | undefined;
+    const page = Number(requestedPagination?.page ?? 1);
+    const pageSize = Number(requestedPagination?.pageSize ?? 25);
+    if (!Number.isInteger(page) || page < 1 || !Number.isInteger(pageSize) || pageSize < 1 || pageSize > 100) {
+      return ctx.badRequest('La paginación debe usar page positivo y pageSize entre 1 y 100.');
+    }
+    const candidates: any[] = [];
+    let pageCount = 1;
+    for (let fetchPage = 1; fetchPage <= pageCount; fetchPage += 1) {
+      ctx.query.pagination = { page: fetchPage, pageSize: 100 };
+      const result = await super.find(ctx);
+      pageCount = result.meta?.pagination?.pageCount ?? 1;
+      candidates.push(...(result.data ?? []));
+    }
+
+    const relatedMatches = await (getStrapi() as any).db.query(UID).findMany({
+      where: {
+        documentId: { $in: candidates.map((product) => product.documentId) },
+        ...Object.fromEntries(relations.map((relation) => [relation, { documentId: relationFilters[relation] }])),
+      },
+      select: ['documentId'],
+    });
+    const matchingIds = new Set(relatedMatches.map((item: any) => item.documentId));
+    const matches = candidates.filter((product) => matchingIds.has(product.documentId));
+
+    const start = (page - 1) * pageSize;
+    const data = matches.slice(start, start + pageSize);
+    await hydratePublicRelations(data, requestedPopulate);
+    hideDisabledPrices(data);
+    for (const item of data) removeInternalFields(item, requestedFields, ['mostrarPrecio']);
+    ctx.query.pagination = requestedPagination;
+    return {
+      data,
+      meta: {
+        pagination: {
+          page,
+          pageSize,
+          pageCount: Math.ceil(matches.length / pageSize),
+          total: matches.length,
+        },
+      },
+    };
   },
 
   async findOne(ctx) {
     ctx.query.status = 'published';
-    if (Array.isArray(ctx.query.fields) && !ctx.query.fields.includes('mostrarPrecio')) {
-      ctx.query.fields = [...ctx.query.fields, 'mostrarPrecio'];
-    } else if (typeof ctx.query.fields === 'string') {
-      ctx.query.fields = [ctx.query.fields, 'mostrarPrecio'];
-    }
+    const requestedFields = ensureFields(ctx, ['mostrarPrecio', 'activo']);
     const response = await super.findOne(ctx);
     if (!response || response.data?.activo !== true) return ctx.notFound('Producto no encontrado');
+    await hydratePublicRelations([response.data], ctx.query.populate);
     hideDisabledPrices(response.data);
+    removeInternalFields(response.data, requestedFields, ['mostrarPrecio', 'activo']);
     return response;
   },
 
@@ -159,5 +240,9 @@ export default factories.createCoreController(UID, () => ({
     const document = await (getStrapi() as any).documents(UID).unpublish({ documentId: ctx.params.documentId });
     if (!document) return ctx.notFound('Producto no encontrado.');
     ctx.body = { data: document };
+  },
+
+  async adminUploadMedia(ctx: any) {
+    return uploadCatalogImages(ctx, 5);
   },
 }));

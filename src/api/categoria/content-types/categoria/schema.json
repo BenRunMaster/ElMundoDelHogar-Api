@@ -13,6 +13,7 @@
     "nombre": { "type": "string", "required": true, "minLength": 2 },
     "descripcion": { "type": "text" },
     "icono": { "type": "string" },
+    "iconoImagen": { "type": "media", "multiple": false, "allowedTypes": ["images"] },
     "activo": { "type": "boolean", "default": true },
     "productos": { "type": "relation", "relation": "oneToMany", "target": "api::producto.producto", "mappedBy": "categoria" }
   }

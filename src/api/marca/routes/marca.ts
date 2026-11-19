@@ -10,6 +10,7 @@ export default {
     { method: 'GET', path: '/admin/marcas', handler: 'marca.adminFind', config: secure('adminFind') },
     { method: 'GET', path: '/admin/marcas/:documentId', handler: 'marca.adminFindOne', config: secure('adminFindOne') },
     { method: 'POST', path: '/admin/marcas', handler: 'marca.adminCreate', config: secure('adminCreate') },
+    { method: 'POST', path: '/admin/marcas/media', handler: 'marca.adminUploadMedia', config: secure('adminUploadMedia') },
     { method: 'PUT', path: '/admin/marcas/:documentId', handler: 'marca.adminUpdate', config: secure('adminUpdate') },
     { method: 'DELETE', path: '/admin/marcas/:documentId', handler: 'marca.adminDelete', config: secure('adminDelete') },
     { method: 'POST', path: '/admin/marcas/:documentId/publicar', handler: 'marca.adminPublish', config: secure('adminPublish') },

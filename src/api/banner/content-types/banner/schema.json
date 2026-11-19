@@ -1,0 +1,20 @@
+{
+  "kind": "collectionType",
+  "collectionName": "banners",
+  "info": {
+    "singularName": "banner",
+    "pluralName": "banners",
+    "displayName": "Banner de portada",
+    "description": "Banners de la página de inicio"
+  },
+  "options": { "draftAndPublish": true },
+  "pluginOptions": {},
+  "attributes": {
+    "titulo": { "type": "string", "required": true, "minLength": 2, "maxLength": 200 },
+    "descripcion": { "type": "text" },
+    "imagen": { "type": "media", "multiple": false, "allowedTypes": ["images"], "required": true },
+    "enlaceDestino": { "type": "string", "required": true, "maxLength": 500 },
+    "ordenVisualizacion": { "type": "integer", "required": true, "default": 0, "min": 0 },
+    "activo": { "type": "boolean", "default": true }
+  }
+}
