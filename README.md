@@ -137,6 +137,17 @@ Invoke-RestMethod -Uri "$base/$($producto.documentId)?populate=*"
 
 La ficha del producto `DEMO-LIC-002` no incluye la propiedad `precio` en el JSON, aunque se solicite directamente.
 
+### Búsqueda global del sitio
+
+`GET /api/public/busqueda?q=...` busca por nombre o código interno de producto, y por nombre de categoría y marca. `q` debe tener entre 2 y 100 caracteres. `limite` es opcional (por defecto 5, máximo 20 por tipo). La respuesta agrupa hasta ese número de coincidencias en `data.productos`, `data.categorias` y `data.marcas`. Solo incluye contenido publicado y activo; `precio` se omite en los productos que no permiten mostrarlo.
+
+```powershell
+$api = 'http://localhost:1337/api'
+Invoke-RestMethod -Uri "$api/public/busqueda?q=refrigeradora&limite=8"
+```
+
+La consulta compuesta de inicio está disponible en `GET /api/public/inicio` y devuelve banners, categorías, productos destacados, marcas, promociones vigentes y sucursales activas. Admite límites independientes: `limiteBanners`, `limiteCategorias`, `limiteProductos`, `limiteMarcas`, `limitePromociones` y `limiteSucursales` (enteros de 1 a 20).
+
 ## API interna de usuarios
 
 Las rutas de administración requieren un JWT de una cuenta con rol `panel-admin`; las cuentas Editor reciben `403`.
