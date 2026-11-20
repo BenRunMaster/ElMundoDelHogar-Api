@@ -1,0 +1,10 @@
+{
+  "collectionName": "components_negocio_redes_sociales",
+  "info": { "displayName": "Red social" },
+  "options": {},
+  "attributes": {
+    "nombre": { "type": "enumeration", "enum": ["facebook", "instagram", "tiktok", "youtube", "linkedin"], "required": true },
+    "url": { "type": "string", "required": true, "maxLength": 500 },
+    "activo": { "type": "boolean", "default": true }
+  }
+}

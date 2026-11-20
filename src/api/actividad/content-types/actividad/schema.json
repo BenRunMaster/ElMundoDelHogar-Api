@@ -1,0 +1,17 @@
+{
+  "kind": "collectionType",
+  "collectionName": "actividad_administrativa",
+  "info": { "singularName": "actividad", "pluralName": "actividades", "displayName": "Actividad administrativa" },
+  "options": { "draftAndPublish": false },
+  "pluginOptions": {},
+  "attributes": {
+    "usuarioId": { "type": "integer", "required": true },
+    "nombreUsuario": { "type": "string", "required": true, "maxLength": 120 },
+    "accion": { "type": "enumeration", "enum": ["crear", "actualizar", "eliminar", "publicar", "despublicar", "cargar-imagen"], "required": true },
+    "modulo": { "type": "enumeration", "enum": ["productos", "categorias", "marcas", "promociones", "banners", "sucursales", "informacionNegocio", "contactos", "usuarios"], "required": true },
+    "recursoId": { "type": "string", "maxLength": 255 },
+    "resumen": { "type": "string", "required": true, "maxLength": 500 },
+    "metodo": { "type": "string", "required": true, "maxLength": 10 },
+    "ruta": { "type": "string", "required": true, "maxLength": 300 }
+  }
+}

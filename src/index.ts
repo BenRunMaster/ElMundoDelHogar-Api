@@ -76,6 +76,14 @@ async function ensurePanelRoles(strapi: Core.Strapi) {
     'api::sucursal.sucursal.adminDelete',
     'api::sucursal.sucursal.adminPublish',
     'api::sucursal.sucursal.adminUnpublish',
+    'api::informacion-negocio.informacion-negocio.adminFind',
+    'api::informacion-negocio.informacion-negocio.adminUpdate',
+    'api::informacion-negocio.informacion-negocio.adminPublish',
+    'api::informacion-negocio.informacion-negocio.adminUploadMedia',
+    'api::contacto.contacto.adminFind',
+    'api::contacto.contacto.adminUpdate',
+    'api::dashboard.dashboard.resumen',
+    'api::dashboard.dashboard.actividad',
   ];
 
   for (const role of PANEL_ROLES) {

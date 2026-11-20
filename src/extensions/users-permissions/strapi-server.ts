@@ -23,6 +23,7 @@ export default (plugin: UsersPermissionsPlugin) => {
       usuarios: false,
     },
   };
+  plugin.contentTypes.user.schema.attributes.ultimoAcceso = { type: 'datetime' };
 
   return plugin;
 };

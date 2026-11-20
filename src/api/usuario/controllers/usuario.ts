@@ -26,6 +26,7 @@ type UserRecord = {
   email: string;
   blocked: boolean;
   confirmed: boolean;
+  ultimoAcceso?: string | Date | null;
   permisos?: Partial<PermissionMap> | null;
   role?: { id?: number; name: string; type: RoleType } | null;
 };
@@ -79,7 +80,7 @@ function presentUser(user: UserRecord) {
     activo: !user.blocked,
     confirmado: user.confirmed,
     permisos,
-    ultimoAcceso: null,
+    ultimoAcceso: user.ultimoAcceso ?? null,
   };
 }
 
@@ -138,7 +139,7 @@ export default {
 
     const [users, total] = await strapi.db.query(USER_UID).findWithCount({
       where,
-      select: ['id', 'username', 'nombreCompleto', 'email', 'blocked', 'confirmed', 'permisos'],
+      select: ['id', 'username', 'nombreCompleto', 'email', 'blocked', 'confirmed', 'permisos', 'ultimoAcceso'],
       populate: { role: { select: ['name', 'type'] } },
       orderBy: { nombreCompleto: 'asc', username: 'asc' },
       offset: (page - 1) * pageSize,

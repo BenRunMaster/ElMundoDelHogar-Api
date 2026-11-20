@@ -1,0 +1,13 @@
+{
+  "kind": "collectionType",
+  "collectionName": "mensajes_contacto",
+  "info": { "singularName": "contacto", "pluralName": "contactos", "displayName": "Mensaje de contacto" },
+  "options": { "draftAndPublish": false },
+  "pluginOptions": {},
+  "attributes": {
+    "nombre": { "type": "string", "required": true, "minLength": 2, "maxLength": 120 },
+    "correo": { "type": "email", "required": true, "maxLength": 160 },
+    "mensaje": { "type": "text", "required": true, "minLength": 10, "maxLength": 5000 },
+    "estado": { "type": "enumeration", "enum": ["nuevo", "en-proceso", "resuelto"], "default": "nuevo", "required": true }
+  }
+}

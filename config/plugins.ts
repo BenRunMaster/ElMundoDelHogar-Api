@@ -24,6 +24,24 @@ const deniedTypes = [
 ];
 
 const config = ({ env }: Core.Config.Shared.ConfigParams): Core.Config.Plugin => ({
+  email: {
+    config: {
+      provider: 'nodemailer',
+      providerOptions: {
+        host: env('SMTP_HOST', 'localhost'),
+        port: env.int('SMTP_PORT', 1025),
+        secure: env.bool('SMTP_SECURE', false),
+        ignoreTLS: env.bool('SMTP_IGNORE_TLS', true),
+        ...(env('SMTP_USERNAME') && env('SMTP_PASSWORD')
+          ? { auth: { user: env('SMTP_USERNAME'), pass: env('SMTP_PASSWORD') } }
+          : {}),
+      },
+      settings: {
+        defaultFrom: env('EMAIL_DEFAULT_FROM', 'no-reply@localhost'),
+        defaultReplyTo: env('EMAIL_DEFAULT_REPLY_TO', 'no-reply@localhost'),
+      },
+    },
+  },
   documentation: {
     // Keep interactive API docs available locally and disabled in production
     // unless an operator explicitly enables and protects them.

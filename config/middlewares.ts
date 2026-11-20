@@ -9,6 +9,7 @@ const config: Core.Config.Middlewares = [
   'strapi::query',
   'strapi::body',
   'strapi::session',
+  'global::auditoria',
   'strapi::favicon',
   'strapi::public',
 ];

@@ -157,7 +157,7 @@ Invoke-RestMethod -Uri 'http://localhost:1337/api/admin/usuarios?q=maria&role=pa
 
 Los módulos de `permisos` son `productos`, `categorias`, `marcas`, `promociones`, `banners`, `sucursales`, `informacionNegocio` y `usuarios`; cada valor es booleano. En esta etapa son accesos por módulo, no acciones CRUD separadas. Editor no puede recibir el permiso `usuarios`. La política `global::permiso-modulo` ya protege las rutas internas de productos, categorías y marcas; ocultar controles en Next.js no reemplaza esa validación.
 
-La respuesta incluye `id` numérico, `nombre`, `correo`, `rol`, `rolNombre`, `activo`, `confirmado` y el mapa `permisos`. `ultimoAcceso` se devuelve como `null` porque el modelo actual no guarda ese dato. `meta.pagination` contiene los totales y `meta.resumen` los conteos generales. El usuario no puede cambiar su propio rol, permisos ni estado, y no se permite desactivar o degradar el último Admin activo.
+La respuesta incluye `id` numerico, `nombre`, `correo`, `rol`, `rolNombre`, `activo`, `confirmado`, `ultimoAcceso` y el mapa `permisos`. `ultimoAcceso` se actualiza despues de cada inicio de sesion exitoso. `meta.pagination` contiene los totales y `meta.resumen` los conteos generales. El usuario no puede cambiar su propio rol, permisos ni estado, y no se permite desactivar o degradar el último Admin activo.
 
 ## API del catálogo para el panel interno
 
@@ -295,4 +295,54 @@ Las rutas `POST /api/admin/promociones/media` y `POST /api/admin/banners/media` 
 
 ## Alcance actual y siguiente pendiente
 
-Incluye el CMS Strapi nativo, APIs públicas del catálogo y de inicio, CRUD interno de productos, categorías, marcas, promociones, banners, sucursales y usuarios, y carga autenticada de imágenes. No incluye el frontend Next.js, información editable del negocio, formulario de contacto, notificaciones ni dashboard personalizado. El siguiente pendiente de la API es modelar la información institucional/contacto y su lectura pública; luego se podrá conectar el sitio de Next.js.
+Incluye el CMS Strapi nativo, APIs publicas del catalogo y de inicio, CRUD interno de productos, categorias, marcas, promociones, banners y sucursales; gestion de usuarios y de informacion institucional; recepcion de mensajes de contacto; resumen del dashboard y actividad administrativa. No incluye el frontend Next.js, envio de mensajes de contacto por correo, notificaciones ni dashboard visual personalizado. Quedan pendientes la integracion desde Next.js y probar recuperacion de contrasena con el proveedor SMTP configurado.
+
+## Información del negocio y contacto
+
+La información institucional se administra como un único registro (singleton) y se expone públicamente solo cuando está publicada:
+
+```http
+GET /api/negocio
+```
+
+Incluye `nombre`, `eslogan`, `descripcion`, `logo`, `telefono`, `correoContacto`, `direccion`, `horarioAtencion`, `whatsapp`, `redesSociales`, `textoPrincipal`, `textoSecundario` e `imagenInstitucional`. Los medios y redes sociales se obtienen poblados. Para administración, `GET /api/admin/negocio` lee el borrador, `PUT /api/admin/negocio` crea o actualiza el borrador y `POST /api/admin/negocio/publicar` lo publica. La carga de los dos medios usa `POST /api/admin/negocio/media` (`multipart/form-data`, campo `files`, hasta dos imágenes de 10 MB). Todas estas rutas requieren autenticación y permiso `informacionNegocio`.
+
+El formulario público de contacto valida nombre, correo y mensaje, registra la solicitud y devuelve `202 Accepted`. Se puede enviar JSON así:
+
+```powershell
+$api = 'http://localhost:1337/api'
+$mensaje = @{ nombre = 'Ana López'; correo = 'ana@example.com'; mensaje = 'Quiero más información sobre un producto.' } | ConvertTo-Json
+Invoke-RestMethod -Method Post -Uri "$api/contacto" -ContentType 'application/json' -Body $mensaje
+```
+
+Se limita a cinco solicitudes por minuto por dirección IP en cada instancia y se incluye un campo trampa `website` para bots; un valor no vacío se descarta con respuesta genérica. Los mensajes se guardan con estado `nuevo`, sin exponerlos públicamente. Usuarios con permiso `informacionNegocio` pueden consultarlos mediante `GET /api/admin/contactos?q=ana&estado=nuevo&page=1&pageSize=20` y cambiar su estado con `PUT /api/admin/contactos/:id` enviando `{ "estado": "en-proceso" }` o `resuelto`. El límite actual es en memoria por proceso, por lo que en despliegues con varias instancias deberá reemplazarse por un limitador compartido. El envío por correo y las notificaciones no están configurados en esta entrega.
+
+## Dashboard y actividad administrativa
+
+Las dos rutas requieren una sesión de una cuenta `panel-admin` o `panel-editor`:
+
+```http
+GET /api/admin/dashboard/resumen
+GET /api/admin/dashboard/actividad?page=1&pageSize=10
+```
+
+`resumen` devuelve conteos de productos, categorías, marcas, promociones, banners y sucursales publicados y activos; las promociones además deben estar dentro de vigencia en `America/El_Salvador`. También incluye `usuariosActivos` (cuentas internas no bloqueadas). `actividad` devuelve la actividad más reciente con `meta.pagination`; acepta `q`, `modulo` y `accion` para filtrar.
+
+El middleware registra operaciones administrativas exitosas de creación, actualización, eliminación, publicación, despublicación y carga de imágenes. Cada evento incluye `usuarioId`, `nombreUsuario`, `accion`, `modulo`, `recursoId` cuando aplica, `resumen`, `metodo`, `ruta` y `createdAt`. No guarda el cuerpo de la solicitud ni información de contraseñas o correos del formulario de contacto.
+
+Ejemplo PowerShell:
+
+```powershell
+$token = 'JWT_DEVUELTO_POR_LOGIN'
+$headers = @{ Authorization = "Bearer $token" }
+$api = 'http://localhost:1337/api/admin/dashboard'
+Invoke-RestMethod -Uri "$api/resumen" -Headers $headers
+Invoke-RestMethod -Uri "$api/actividad?page=1&pageSize=10&modulo=productos" -Headers $headers
+```
+
+
+## Ultimo acceso y correo de recuperacion
+
+El listado interno de usuarios devuelve `ultimoAcceso` en ISO 8601; se actualiza solo cuando el login `POST /api/auth/local` responde correctamente. Strapi usa el proveedor Nodemailer. En desarrollo, configura Mailpit en `localhost:1025` (la interfaz web suele estar en `http://localhost:8025`) o completa `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_IGNORE_TLS`, `SMTP_USERNAME` y `SMTP_PASSWORD` en `.env`. En produccion usa credenciales SMTP del proveedor autorizado; nunca las guardes en archivos versionados. `EMAIL_DEFAULT_FROM` y `EMAIL_DEFAULT_REPLY_TO` definen remitente y respuestas.
+
+El endpoint `POST /api/auth/forgot-password` responde de forma generica para no revelar si la cuenta existe. Para comprobar el envio real, hace falta que el servidor SMTP este activo y que la cuenta interna de prueba pueda recibir el correo. El token de recuperacion se usa luego en `POST /api/auth/reset-password`.

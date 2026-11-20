@@ -1,0 +1,22 @@
+{
+  "kind": "singleType",
+  "collectionName": "informacion_negocio",
+  "info": { "singularName": "informacion-negocio", "pluralName": "informacion-negocios", "displayName": "Información del negocio" },
+  "options": { "draftAndPublish": true },
+  "pluginOptions": {},
+  "attributes": {
+    "nombre": { "type": "string", "required": true, "maxLength": 160 },
+    "eslogan": { "type": "string", "maxLength": 200 },
+    "descripcion": { "type": "text", "required": true, "maxLength": 3000 },
+    "logo": { "type": "media", "multiple": false, "allowedTypes": ["images"] },
+    "telefono": { "type": "string", "required": true, "maxLength": 40 },
+    "correoContacto": { "type": "email", "required": true, "maxLength": 160 },
+    "direccion": { "type": "text", "required": true, "maxLength": 1000 },
+    "horarioAtencion": { "type": "string", "required": true, "maxLength": 200 },
+    "whatsapp": { "type": "string", "maxLength": 40 },
+    "redesSociales": { "type": "component", "repeatable": true, "component": "negocio.red-social" },
+    "textoPrincipal": { "type": "string", "required": true, "maxLength": 300 },
+    "textoSecundario": { "type": "text", "required": true, "maxLength": 3000 },
+    "imagenInstitucional": { "type": "media", "multiple": false, "allowedTypes": ["images"] }
+  }
+}
